@@ -6,56 +6,10 @@ import math
 import io
 import easyocr
 from rembg import remove
-from pathlib import Path
 import os
+from pathlib import Path
 
-# import os
-# import requests
-
-# # Google Drive file IDs (Replace with your actual IDs)
-# MODEL_URLS = {
-#     "colorization_release_v2.caffemodel": "1oO8iAw-QdAgYToLxNcq1_vSYssnoN6by",
-#     "colorization_deploy_v2.prototxt": "1yFmDvR2Tq_gFCJ28T1KL3ppp7vDPgwOU",
-#     "pts_in_hull.npy": "1ZBeJY8EH7Mg07lBXSMkSpfISIoRk2WS_"
-# }
-
-# MODEL_DIR = "models"
-# os.makedirs(MODEL_DIR, exist_ok=True)
-
-# def download_large_file_from_gdrive(file_id, dest_path):
-#     """Download large files from Google Drive using the confirmation token bypass."""
-#     base_url = "https://drive.google.com/uc?export=download"
-
-#     session = requests.Session()
-#     response = session.get(base_url, params={"id": file_id}, stream=True)
-    
-#     # If a warning exists for large files, handle it
-#     for key, value in response.cookies.items():
-#         if key.startswith("download_warning"):
-#             response = session.get(base_url, params={"id": file_id, "confirm": value}, stream=True)
-#             break
-
-#     with open(dest_path, "wb") as f:
-#         for chunk in response.iter_content(32768):
-#             f.write(chunk)
-#     print(f"Downloaded: {dest_path}")
-
-# def download_models():
-#     """Download model files if they do not exist."""
-#     for filename, file_id in MODEL_URLS.items():
-#         filepath = os.path.join(MODEL_DIR, filename)
-#         if not os.path.exists(filepath):
-#             print(f"Downloading {filename}...")
-#             download_large_file_from_gdrive(file_id, filepath)
-#             print(f"{filename} downloaded successfully!")
-
-# # Download models before running the app
-# download_models()
-
-
-
-
-
+# -------- UTILITY FUNCTIONS --------
 def enhance_image(image, brightness=1.0, contrast=1.0, saturation=1.0, sharpness=1.0):
     img = ImageEnhance.Brightness(image).enhance(brightness)
     img = ImageEnhance.Contrast(img).enhance(contrast)
@@ -100,12 +54,13 @@ def apply_filter(image, filter_type, strength=2):
     return image
 
 def add_watermark(image, text, opacity=0.5, position='bottom-right', size=None):
-    """Enhanced watermark function with better positioning"""
+    """Enhanced watermark function with better positioning and font handling"""
     img = image.convert('RGBA')
     txt = Image.new('RGBA', img.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(txt)
     font = ImageFont.load_default()
     
+    # Get text size
     bbox = draw.textbbox((0, 0), text, font=font)
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
@@ -124,39 +79,46 @@ def add_watermark(image, text, opacity=0.5, position='bottom-right', size=None):
     elif position == 'top-left':
         x = padding
         y = padding
-    else: 
+    else:  # center
         x = (img.size[0] - text_width) // 2
         y = (img.size[1] - text_height) // 2
     
-    # shadow on watermark----
-    # shadow_offset = 2
-    # draw.text((x + shadow_offset, y + shadow_offset), text, 
-    #           font=font, fill=(0, 0, 0, int(255 * opacity)))
-    # draw.text((x, y), text, font=font, 
-    #           fill=(255, 255, 255, int(255 * opacity)))
+    # Draw text with shadow for better visibility
+    shadow_offset = 2
+    draw.text((x + shadow_offset, y + shadow_offset), text, 
+              font=font, fill=(0, 0, 0, int(255 * opacity)))
+    draw.text((x, y), text, font=font, 
+              fill=(255, 255, 255, int(255 * opacity)))
     
     return Image.alpha_composite(img, txt)
 
 def detect_edges(image, threshold1=100, threshold2=200):
-    """Enhanced edge detection using cv2 canny with adjustable thresholds"""
+    """Enhanced edge detection with adjustable thresholds"""
     img_array = np.array(image.convert("RGB"))
     gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
     edges = cv2.Canny(gray, threshold1, threshold2)
     return Image.fromarray(edges)
 
 def remove_background_with_color(image, bg_color=(255, 255, 255)):
+    """Remove background and replace with solid color"""
+    # Remove background using rembg
     output = remove(image)
+    
     # Create new image with solid color background
     background = Image.new('RGBA', output.size, bg_color + (255,))
+    
     # Composite the foreground onto the colored background
     final_image = Image.alpha_composite(background.convert('RGBA'), output.convert('RGBA'))
+    
     return final_image.convert('RGB')
 
 def enhance_pixel_quality(image, denoise_strength=10, upscale_factor=2):
     """
     Enhance image quality through denoising and upscaling using standard OpenCV methods
-    denoise_strength: Strength of denoising (1-30)
-    upscale_factor: Factor by which to upscale the image (1-4)
+    Args:
+        image: PIL Image
+        denoise_strength: Strength of denoising (1-30)
+        upscale_factor: Factor by which to upscale the image (1-4)
     """
     # Convert PIL Image to OpenCV format
     img_array = np.array(image)
@@ -170,6 +132,7 @@ def enhance_pixel_quality(image, denoise_strength=10, upscale_factor=2):
         7,
         21
     )
+    
     # Calculate new dimensions
     height, width = denoised.shape[:2]
     new_height = int(height * upscale_factor)
@@ -258,6 +221,7 @@ def enhance_pixel_quality(image, denoise_strength=10, upscale_factor=2):
     
 #     return Image.fromarray(colorized)
 
+
 def add_vignette(image, intensity=0.5, color=(0, 0, 0)):
     """Add vignette effect with customizable color"""
     img_array = np.array(image)
@@ -328,7 +292,8 @@ def resize_image(image, width=None, height=None):
         return image.resize((width, height))
     return image
 
-# ===========================================================================================================================================================================================
+
+# ===========================================================================================================================================================================
 
 # UI Configuration
 st.set_page_config(
@@ -388,8 +353,19 @@ with st.sidebar:
     
     # Tools Section
     st.header("🛠️ Tools")
-    feature = st.selectbox("Choose Tool:", [ #add IMAGE COLORISATION LATER
-"Basic Enhancement", "SUPER RESOLUTION", "BACKGROUND REMOVAL", "Color Effects", "Edge Detection", "Watermark", "Text OCR", "Rotate & Resize", "Vignette Effect", "Frame", "Filters"])
+    feature = st.selectbox("Choose Tool:", [
+        "Basic Enhancement",
+        "Color Effects",
+        "Edge Detection",
+        "Super Sampling",
+        "Background Removal",
+        "Watermark",
+        "Text OCR",
+        "Rotate & Resize",
+        "Vignette Effect",
+        "Frame",
+        "Filters"
+    ])
     
     # Tool-specific controls
     if feature == "Basic Enhancement":
@@ -399,14 +375,10 @@ with st.sidebar:
         saturation = st.slider("Saturation", 0.0, 2.0, 1.0, 0.1)
         sharpness = st.slider("Sharpness", 0.0, 2.0, 1.0, 0.1)
         
-    # elif feature == "Colorize":
-    #     st.subheader("Colorization Settings")
-    #     st.info("This will add colors to black & white images.")
-        
-    elif feature == "Pixel Enhancement":
+    elif feature == "Super Sampling":
         st.subheader("Pixel Enhancement Settings")
         denoise_strength = st.slider("Denoise Strength", 1, 20, 10, help="Higher values mean stronger noise reduction")
-        upscale_factor = st.slider("Upscale Factor", 1, 4, 2, help="Factor by which to increase image resolution")    
+        upscale_factor = st.slider("Upscale Factor", 1, 3, 2, help="Factor by which to increase image resolution")    
     
     elif feature == "Color Effects":
         st.subheader("Color Effect Options")
@@ -449,13 +421,6 @@ with st.sidebar:
             height = st.number_input("Height", min_value=1, max_value=4000, value=800)
         maintain_aspect = st.checkbox("Maintain Aspect Ratio", value=True)
         
-    elif feature == "Pixel Enhancement":
-        st.subheader("Enhancement Settings")
-        denoise_strength = st.slider("Denoise Strength", 1, 20, 10,
-            help="Higher values mean stronger noise reduction")
-        upscale_factor = st.slider("Upscale Factor", 1, 4, 2,
-            help="Factor by which to increase image resolution")
-        
     elif feature == "Filters":
         st.subheader("Filter Options")
         filter_type = st.selectbox("Select Filter", 
@@ -466,7 +431,7 @@ with st.sidebar:
     elif feature == "Frame":
         st.subheader("Frame Settings")
         frame_width = st.slider("Frame Width", 1, 50, 10)
-        frame_color = st.color_picker("Frame Color", "#FFFFFF")
+        frame_color = st.color_picker("Frame Color", "#000000")
         frame_style = st.selectbox("Frame Style", ["Solid", "Double", "Shadow"])
         
     elif feature == "Vignette Effect":
@@ -478,6 +443,7 @@ with st.sidebar:
 if uploaded_file:
     # Load and process image
     image = Image.open(uploaded_file).convert("RGB")
+    
     # Create two columns for before/after
     col1, col2 = st.columns(2)
     
@@ -498,31 +464,23 @@ if uploaded_file:
                     st.image(image, use_column_width=True)
                     st.text_area("Extracted Text", text, height=200)
                 else:
+                    # Process image based on selected feature
                     if feature == "Basic Enhancement":
                         result = enhance_image(image, brightness, contrast, saturation, sharpness)
-
-                    # elif feature == "Colorize":
-                    #     result = colorize_image(image)
-                        
-                    elif feature == "Pixel Enhancement":
+                    elif feature == "Super Sampling":
                         result = enhance_pixel_quality(image, denoise_strength, upscale_factor)
-                    
                     elif feature == "Color Effects":
                         result = apply_color_effect(image, effect)
-                        
                     elif feature == "Edge Detection":
                         result = detect_edges(image, threshold1, threshold2)
-                        
                     elif feature == "Background Removal":
                         if bg_option == "Transparent":
                             result = remove_background_with_color(image)
                         else:
                             bg_color_rgb = tuple(int(bg_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
                             result = remove_background_with_color(image, bg_color_rgb)
-                            
                     elif feature == "Watermark":
                         result = add_watermark(image, watermark_text, opacity, position, font_size)
-                        
                     elif feature == "Rotate & Resize":
                         rotated = rotate_image(image, angle)
                         if resize_option == "Both":
@@ -531,16 +489,12 @@ if uploaded_file:
                             result = resize_image(rotated, width=width)
                         else:
                             result = resize_image(rotated, height=height)
-                            
                     elif feature == "Pixel Enhancement":
                         result = enhance_pixel_quality(image, denoise_strength, upscale_factor)
-                        
                     elif feature == "Vignette Effect":
                         result = add_vignette(image, vignette_intensity)
-                        
                     elif feature == "Frame":
                         result = add_frame(image, frame_width, frame_color)
-                        
                     elif feature == "Filters":
                         result = apply_filter(image, filter_type)
                     
@@ -551,7 +505,7 @@ if uploaded_file:
                 st.error(f"An error occurred: {str(e)}")
                 st.error("Please try different settings or another image")
     
-    # download button (saves as IO bytes - selects format and downloads)
+    # download button 
     if 'result' in locals():
         st.sidebar.markdown("---")
         buf = io.BytesIO()
@@ -574,8 +528,10 @@ if uploaded_file:
         )
 
 else:
-    # INFO SCREEN AT START (NO IMAGE UPLOADED)
+    # Display welcome message and instructions when no image is uploaded
     st.info("👈 Start by uploading an image from the sidebar")
+    
+    # Display features overview
     st.header("🌟 Features")
     col1, col2 = st.columns(2)
     
@@ -588,7 +544,7 @@ else:
         - 📝 Text Extraction (OCR)
         - 🎨 Colorize Image
         """)
-        
+    
     with col2:
         st.markdown("""
         - 🔄 Rotate & Resize
