@@ -36,8 +36,16 @@ def download_large_file_from_gdrive(file_id, dest_path):
             break
 
     with open(dest_path, "wb") as f:
-        for chunk in response.iter_content(32768):
-            f.write(chunk)
+        total_size = int(response.headers.get('content-length', 0))
+        downloaded = 0
+
+        with open(dest_path, "wb") as f:
+            for chunk in response.iter_content(32768):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    print(f"\rDownloading {filename}: {downloaded / total_size:.2%} complete", end="")
+
     print(f"Downloaded: {dest_path}")
 
 def download_models():
