@@ -1,10 +1,11 @@
 #!/bin/bash
 set -e  # Stop the script if any command fails
 
-# Install Git LFS
-git lfs install
+# Install Git LFS manually
+apt-get update && apt-get install -y git-lfs
 
-# Fetch all LFS files
+# Initialize and fetch LFS files
+git lfs install
 git lfs pull
 
 # Install dependencies
