@@ -5,3 +5,4 @@ numpy==1.24.3
 opencv-python-headless==4.8.0.76
 rembg==2.0.50
 easyocr==1.7.2
+git-lfs
