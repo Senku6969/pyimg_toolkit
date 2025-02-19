@@ -7,83 +7,53 @@ import io
 import easyocr
 from rembg import remove
 from pathlib import Path
-
-
 import os
-import requests
-
-# Google Drive file IDs (Replace with your actual IDs)
-MODEL_URLS = {
-    "colorization_release_v2.caffemodel": "1oO8iAw-QdAgYToLxNcq1_vSYssnoN6by",
-    "colorization_deploy_v2.prototxt": "1yFmDvR2Tq_gFCJ28T1KL3ppp7vDPgwOU",
-    "pts_in_hull.npy": "1ZBeJY8EH7Mg07lBXSMkSpfISIoRk2WS_"
-}
-
-MODEL_DIR = "models"
-os.makedirs(MODEL_DIR, exist_ok=True)
-
-def download_large_file_from_gdrive(file_id, dest_path):
-    """Download large files from Google Drive using the confirmation token bypass."""
-    base_url = "https://drive.google.com/uc?export=download"
-
-    session = requests.Session()
-    response = session.get(base_url, params={"id": file_id}, stream=True)
-    
-    # If a warning exists for large files, handle it
-    for key, value in response.cookies.items():
-        if key.startswith("download_warning"):
-            response = session.get(base_url, params={"id": file_id, "confirm": value}, stream=True)
-            break
-
-    with open(dest_path, "wb") as f:
-        for chunk in response.iter_content(32768):
-            f.write(chunk)
-    print(f"Downloaded: {dest_path}")
-
-def download_models():
-    """Download model files if they do not exist."""
-    for filename, file_id in MODEL_URLS.items():
-        filepath = os.path.join(MODEL_DIR, filename)
-        if not os.path.exists(filepath):
-            print(f"Downloading {filename}...")
-            download_large_file_from_gdrive(file_id, filepath)
-            print(f"{filename} downloaded successfully!")
-
-# Download models before running the app
-download_models()
-
 
 # import os
-# import requests  # Add this import for downloading models
+# import requests
 
-# # ------------------ MODEL DOWNLOADING ------------------
-# # Google Drive Direct Download Links (Replace with your actual links)
+# # Google Drive file IDs (Replace with your actual IDs)
 # MODEL_URLS = {
-#     "colorization_release_v2.caffemodel": "https://drive.google.com/uc?export=download&id=1oO8iAw-QdAgYToLxNcq1_vSYssnoN6by",
-#     "colorization_deploy_v2.prototxt": "https://drive.google.com/uc?export=download&id=1yFmDvR2Tq_gFCJ28T1KL3ppp7vDPgwOU",
-#     "pts_in_hull.npy": "https://drive.google.com/uc?export=download&id=1ZBeJY8EH7Mg07lBXSMkSpfISIoRk2WS_"
+#     "colorization_release_v2.caffemodel": "1oO8iAw-QdAgYToLxNcq1_vSYssnoN6by",
+#     "colorization_deploy_v2.prototxt": "1yFmDvR2Tq_gFCJ28T1KL3ppp7vDPgwOU",
+#     "pts_in_hull.npy": "1ZBeJY8EH7Mg07lBXSMkSpfISIoRk2WS_"
 # }
-
 
 # MODEL_DIR = "models"
 # os.makedirs(MODEL_DIR, exist_ok=True)
 
+# def download_large_file_from_gdrive(file_id, dest_path):
+#     """Download large files from Google Drive using the confirmation token bypass."""
+#     base_url = "https://drive.google.com/uc?export=download"
+
+#     session = requests.Session()
+#     response = session.get(base_url, params={"id": file_id}, stream=True)
+    
+#     # If a warning exists for large files, handle it
+#     for key, value in response.cookies.items():
+#         if key.startswith("download_warning"):
+#             response = session.get(base_url, params={"id": file_id, "confirm": value}, stream=True)
+#             break
+
+#     with open(dest_path, "wb") as f:
+#         for chunk in response.iter_content(32768):
+#             f.write(chunk)
+#     print(f"Downloaded: {dest_path}")
+
 # def download_models():
-#     """Download model files if they do not exist"""
-#     for filename, url in MODEL_URLS.items():
+#     """Download model files if they do not exist."""
+#     for filename, file_id in MODEL_URLS.items():
 #         filepath = os.path.join(MODEL_DIR, filename)
 #         if not os.path.exists(filepath):
 #             print(f"Downloading {filename}...")
-#             response = requests.get(url, stream=True)
-#             with open(filepath, "wb") as f:
-#                 for chunk in response.iter_content(chunk_size=1024):
-#                     if chunk:
-#                         f.write(chunk)
+#             download_large_file_from_gdrive(file_id, filepath)
 #             print(f"{filename} downloaded successfully!")
 
 # # Download models before running the app
 # download_models()
-# # ------------------ MODEL DOWNLOADING END ------------------
+
+
+
 
 
 def enhance_image(image, brightness=1.0, contrast=1.0, saturation=1.0, sharpness=1.0):
@@ -224,69 +194,69 @@ def enhance_pixel_quality(image, denoise_strength=10, upscale_factor=2):
     # Convert back to PIL Image
     return Image.fromarray(detail_enhanced)
 
-def colorize_image(image):
-    """
-    Colorize a grayscale image using OpenCV's colorization model.
-    """
-    # Convert PIL Image to OpenCV format (numpy array)
-    img_array = np.array(image)
+# def colorize_image(image):
+#     """
+#     Colorize a grayscale image using OpenCV's colorization model.
+#     """
+#     # Convert PIL Image to OpenCV format (numpy array)
+#     img_array = np.array(image)
 
-    # Ensure the input is grayscale (if not, convert it to grayscale)
-    if len(img_array.shape) == 3:  # If the image is colored (3 channels)
-        img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
+#     # Ensure the input is grayscale (if not, convert it to grayscale)
+#     if len(img_array.shape) == 3:  # If the image is colored (3 channels)
+#         img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
 
-    # Ensure the image is 3-channel (convert grayscale to 3 channels)
-    if len(img_array.shape) == 2:  # If grayscale (2D)
-        img_array = cv2.cvtColor(img_array, cv2.COLOR_GRAY2BGR)  # Convert to 3-channel BGR image
+#     # Ensure the image is 3-channel (convert grayscale to 3 channels)
+#     if len(img_array.shape) == 2:  # If grayscale (2D)
+#         img_array = cv2.cvtColor(img_array, cv2.COLOR_GRAY2BGR)  # Convert to 3-channel BGR image
     
-    # Load the colorization model (ensure paths are correct)
-    prototxt_path = 'colorization_deploy_v2.prototxt'
-    model_path = 'colorization_release_v2.caffemodel'
-    kernel_path = 'pts_in_hull.npy'
+#     # Load the colorization model (ensure paths are correct)
+#     prototxt_path = 'colorization_deploy_v2.prototxt'
+#     model_path = 'colorization_release_v2.caffemodel'
+#     kernel_path = 'pts_in_hull.npy'
     
-    # Check if the model files exist
-    if not all(Path(p).exists() for p in [prototxt_path, model_path, kernel_path]):
-        raise FileNotFoundError("Colorization model files not found. Please download them from OpenCV's repository.")
+#     # Check if the model files exist
+#     if not all(Path(p).exists() for p in [prototxt_path, model_path, kernel_path]):
+#         raise FileNotFoundError("Colorization model files not found. Please download them from OpenCV's repository.")
     
-    # Load the model and the points for colorization
-    net = cv2.dnn.readNetFromCaffe(prototxt_path, model_path)
-    pts = np.load(kernel_path)
+#     # Load the model and the points for colorization
+#     net = cv2.dnn.readNetFromCaffe(prototxt_path, model_path)
+#     pts = np.load(kernel_path)
     
-    # Process model's layers and set the points
-    class8 = net.getLayerId("class8_ab")
-    conv8 = net.getLayerId("conv8_313_rh")
-    pts = pts.transpose().reshape(2, 313, 1, 1)
-    net.getLayer(class8).blobs = [pts.astype("float32")]
-    net.getLayer(conv8).blobs = [np.full([1, 313], 2.606, dtype='float32')]
+#     # Process model's layers and set the points
+#     class8 = net.getLayerId("class8_ab")
+#     conv8 = net.getLayerId("conv8_313_rh")
+#     pts = pts.transpose().reshape(2, 313, 1, 1)
+#     net.getLayer(class8).blobs = [pts.astype("float32")]
+#     net.getLayer(conv8).blobs = [np.full([1, 313], 2.606, dtype='float32')]
     
-    # Convert the image to Lab color space
-    scaled = img_array.astype("float32") / 255.0
-    lab = cv2.cvtColor(scaled, cv2.COLOR_BGR2LAB)
+#     # Convert the image to Lab color space
+#     scaled = img_array.astype("float32") / 255.0
+#     lab = cv2.cvtColor(scaled, cv2.COLOR_BGR2LAB)
     
-    # Resize the image and split it to get the L channel
-    resized = cv2.resize(lab, (224, 224))
-    L = cv2.split(resized)[0]
-    L -= 50
+#     # Resize the image and split it to get the L channel
+#     resized = cv2.resize(lab, (224, 224))
+#     L = cv2.split(resized)[0]
+#     L -= 50
     
-    # Pass the L channel through the model to get the ab channels (color channels)
-    net.setInput(cv2.dnn.blobFromImage(L))
-    ab = net.forward()[0, :, :, :].transpose((1, 2, 0))
+#     # Pass the L channel through the model to get the ab channels (color channels)
+#     net.setInput(cv2.dnn.blobFromImage(L))
+#     ab = net.forward()[0, :, :, :].transpose((1, 2, 0))
     
-    # Resize the ab channels back to the original image size
-    ab = cv2.resize(ab, (img_array.shape[1], img_array.shape[0]))
+#     # Resize the ab channels back to the original image size
+#     ab = cv2.resize(ab, (img_array.shape[1], img_array.shape[0]))
     
-    # Reassemble the L channel and the ab channels into a full color image
-    L = cv2.split(lab)[0]
-    colorized = np.concatenate((L[:, :, np.newaxis], ab), axis=2)
+#     # Reassemble the L channel and the ab channels into a full color image
+#     L = cv2.split(lab)[0]
+#     colorized = np.concatenate((L[:, :, np.newaxis], ab), axis=2)
     
-    # Convert the image back to BGR color space
-    colorized = cv2.cvtColor(colorized, cv2.COLOR_LAB2BGR)
-    colorized = np.clip(colorized, 0, 1)
+#     # Convert the image back to BGR color space
+#     colorized = cv2.cvtColor(colorized, cv2.COLOR_LAB2BGR)
+#     colorized = np.clip(colorized, 0, 1)
     
-    # Convert back to 8-bit image
-    colorized = (255 * colorized).astype("uint8")
+#     # Convert back to 8-bit image
+#     colorized = (255 * colorized).astype("uint8")
     
-    return Image.fromarray(colorized)
+#     return Image.fromarray(colorized)
 
 def add_vignette(image, intensity=0.5, color=(0, 0, 0)):
     """Add vignette effect with customizable color"""
@@ -418,8 +388,8 @@ with st.sidebar:
     
     # Tools Section
     st.header("🛠️ Tools")
-    feature = st.selectbox("Choose Tool:", [
-"Basic Enhancement","IMG COLORISATION", "SUPER RESOLUTION", "BACKGROUND REMOVAL", "Color Effects", "Edge Detection", "Watermark", "Text OCR", "Rotate & Resize", "Vignette Effect", "Frame", "Filters"])
+    feature = st.selectbox("Choose Tool:", [ #add IMAGE COLORISATION LATER
+"Basic Enhancement", "SUPER RESOLUTION", "BACKGROUND REMOVAL", "Color Effects", "Edge Detection", "Watermark", "Text OCR", "Rotate & Resize", "Vignette Effect", "Frame", "Filters"])
     
     # Tool-specific controls
     if feature == "Basic Enhancement":
@@ -429,9 +399,9 @@ with st.sidebar:
         saturation = st.slider("Saturation", 0.0, 2.0, 1.0, 0.1)
         sharpness = st.slider("Sharpness", 0.0, 2.0, 1.0, 0.1)
         
-    elif feature == "Colorize":
-        st.subheader("Colorization Settings")
-        st.info("This will add colors to black & white images.")
+    # elif feature == "Colorize":
+    #     st.subheader("Colorization Settings")
+    #     st.info("This will add colors to black & white images.")
         
     elif feature == "Pixel Enhancement":
         st.subheader("Pixel Enhancement Settings")
@@ -531,8 +501,8 @@ if uploaded_file:
                     if feature == "Basic Enhancement":
                         result = enhance_image(image, brightness, contrast, saturation, sharpness)
 
-                    elif feature == "Colorize":
-                        result = colorize_image(image)
+                    # elif feature == "Colorize":
+                    #     result = colorize_image(image)
                         
                     elif feature == "Pixel Enhancement":
                         result = enhance_pixel_quality(image, denoise_strength, upscale_factor)

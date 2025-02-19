@@ -1,6 +1,4 @@
 # requirements.txt
-requests
-git-lfs
 streamlit==1.32.0
 Pillow==10.0.0
 numpy==1.24.3
