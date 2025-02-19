@@ -1,12 +1,13 @@
 #!/bin/bash
-set -e  # Stop the script if any command fails
+set -e
 
-# Install Git LFS manually
-apt-get update && apt-get install -y git-lfs
-
-# Initialize and fetch LFS files
-git lfs install
-git lfs pull
+# Git LFS workaround (since Render doesn't support apt installs)
+if ! command -v git-lfs &> /dev/null; then
+    echo "Git LFS is not available, skipping LFS pull..."
+else
+    git lfs install
+    git lfs pull
+fi
 
 # Install dependencies
 pip install -r requirements.txt
