@@ -8,6 +8,37 @@ import easyocr
 from rembg import remove
 import os
 from pathlib import Path
+import requests  # Add this import for downloading models
+
+# ------------------ MODEL DOWNLOADING ------------------
+# Google Drive Direct Download Links (Replace with your actual links)
+MODEL_URLS = {
+    "colorization_release_v2.caffemodel": "https://drive.google.com/uc?export=download&id=1oO8iAw-QdAgYToLxNcq1_vSYssnoN6by",
+    "colorization_deploy_v2.prototxt": "https://drive.google.com/uc?export=download&id=1yFmDvR2Tq_gFCJ28T1KL3ppp7vDPgwOU",
+    "pts_in_hull.npy": "https://drive.google.com/uc?export=download&id=1ZBeJY8EH7Mg07lBXSMkSpfISIoRk2WS_"
+}
+
+
+MODEL_DIR = "models"
+os.makedirs(MODEL_DIR, exist_ok=True)
+
+def download_models():
+    """Download model files if they do not exist"""
+    for filename, url in MODEL_URLS.items():
+        filepath = os.path.join(MODEL_DIR, filename)
+        if not os.path.exists(filepath):
+            print(f"Downloading {filename}...")
+            response = requests.get(url, stream=True)
+            with open(filepath, "wb") as f:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+            print(f"{filename} downloaded successfully!")
+
+# Download models before running the app
+download_models()
+# ------------------ MODEL DOWNLOADING END ------------------
+
 
 def enhance_image(image, brightness=1.0, contrast=1.0, saturation=1.0, sharpness=1.0):
     img = ImageEnhance.Brightness(image).enhance(brightness)
